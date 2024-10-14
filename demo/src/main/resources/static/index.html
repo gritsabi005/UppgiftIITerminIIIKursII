@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+<h1>Register here</h1>
+<input type="text" id="registerEmail" placeholder="Use your email">
+<input type="text" id="registerPassword" placeholder="Chose your password">
+<button id="registerButton">Register</button>
+<h1>Log In here</h1>
+
+<input type="text" id="username" placeholder="User Name">
+<input type="text" id="password" placeholder="Password">
+<button id="logInButton">Log In</button>
+<h1>Delete your account here</h1>
+
+<input type="text" id="deleteUsername" placeholder="Delete with your username">
+<input type="text" id="deletePassword" placeholder="Delete with your password">
+<button id="deleteButton">Delete Account</button>
+
+<h1>You can only access these features once you're logged in</h1>
+<button id="readMessageButton">Read Message</button>
+<input type="text" id="newMessage" placeholder="Write new notes">
+<button id="writeMessageButton">Save</button>
+
+<!-- New div to display messages -->
+<div id="messages" style="margin-top: 20px;"></div>
+
+<script>
+    const mainUrl = "http://localhost:8080";
+    let jwt = null;
+
+    document.getElementById("registerButton").addEventListener("click", function () {
+        register();
+    });
+
+    document.getElementById("logInButton").addEventListener("click", function () {
+        login();
+    });
+
+    document.getElementById("readMessageButton").addEventListener("click", function () {
+        readMessage();
+    });
+
+    document.getElementById("writeMessageButton").addEventListener("click", function () {
+        writeMessage();
+    });
+
+    document.getElementById("deleteButton").addEventListener("click", function () {
+        deleteAccount();
+    });
+
+    //register function
+
+    function deleteAccount(){
+        const deleteUsername = document.getElementById("deleteUsername").value;
+        const deletePassword = document.getElementById("deletePassword").value;
+
+        fetch(mainUrl + "/delete", {
+        method: "DELETE",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ username: deleteUsername, password: deletePassword })
+        })
+        .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.error);
+            });
+        }
+        })
+        .then(data => {
+        alert("Account deleted successfully: " + data.message);
+        })
+        .catch(error => {
+        console.error("Error:", error);
+        alert("Error deleting account: " + error.message);
+        });
+
+    }
+
+    function register(){
+        const registerEmail = document.getElementById("registerEmail").value;
+        const registerPassword = document.getElementById("registerPassword").value;
+
+        fetch (mainUrl + "/register", {
+        method : "POST",
+        headers : { "Content-Type": "application/json"},
+        body: JSON.stringify({ emailAddress: registerEmail, password: registerPassword})
+        })
+        .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.error);
+            });
+        }
+    })
+    .then(data => {
+        alert("Registration successful: " + data.message);
+    })
+    .catch(error => {
+        console.error("Registration error:", error);
+        alert("Registration failed: " + error.message);
+    });
+    }
+
+    // Login function
+    function login() {
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+        fetch(mainUrl + "/logInNow", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ username: username, password: password })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.token) {
+                jwt = data.token;
+                console.log("JWT: ", jwt);
+                alert("JWT received and stored. Check Console for the Token");
+            } else {
+                alert("Login Failed: " + data.error);
+            }
+        })
+        .catch(error => console.log("Error", error));
+    }
+
+    function readMessage() {
+        if (jwt) {
+            fetch(mainUrl + "/readMessages", {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${jwt}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Messages: ", data);
+                displayMessages(data);
+            })
+            .catch(error => console.log("Error", error));
+        } else {
+            alert("You are not authorized");
+        }
+    }
+
+    function displayMessages(messages) {
+        const messagesDiv = document.getElementById("messages");
+        messagesDiv.innerHTML = "";
+
+        if (messages && messages.length > 0) {
+            messages.forEach(message => {
+                const messageElement = document.createElement("p");
+                messageElement.textContent = message;
+                messagesDiv.appendChild(messageElement);
+            });
+        } else {
+            messagesDiv.innerHTML = "<p>No messages found.</p>";
+        }
+    }
+
+    function writeMessage() {
+        const newMessage = document.getElementById("newMessage").value;
+        if (jwt) {
+            fetch(mainUrl + "/writeMessages", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${jwt}`
+                },
+                body: JSON.stringify({ content: newMessage })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert("Message Saved: " + data.status);
+                document.getElementById("newMessage").value = "";
+            })
+            .catch(error => console.log("Error", error));
+        } else {
+            alert("You are not authorized");
+        }
+    }
+</script>
+
+</body>
+</html>
